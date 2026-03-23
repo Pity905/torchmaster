@@ -3,14 +3,16 @@
   "title": "Torchmaster",
   "description": "Easy light source configuration for items.",
   "version": "1.0.0",
-  "manifest": "https://raw.githubusercontent.com/Pity905/torchmaster/main/module.json",
+  "manifest": "https://raw.githubusercontent.com/Pity905/torchmaster/main/module.jsonn",
   "download": "https://github.com/Pity905/torchmaster/archive/refs/heads/main.zip",
   "url": "https://github.com/Pity905/torchmaster",
   "compatibility": {
     "minimum": "11",
     "verified": "13"
   },
-  "esmodules": ["torchmaster.js"],
+  "esmodules": [
+    "torchmaster.js"
+  ],
   "authors": [
     {
       "name": "pity905",
