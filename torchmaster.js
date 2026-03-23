@@ -8,30 +8,30 @@ function hasDmPrivileges() {
   return game.user.isGM || game.user.getFlag("world", "isDMCo") === true;
 }
 
-// Add the light config button to item sheets
-Hooks.on("renderItemSheet", (app, html, data) => {
+// Add button to both default and Tidy5e item sheets
+function addLightConfigButton(app, html) {
   if (!hasDmPrivileges()) return;
+  if (html.find(".torchmaster-config").length > 0) return;
 
-  // Only add to physical items that could be light sources
-  const item = app.item;
+  // Add to the controls dropdown menu alongside Item Macro etc.
+  const menu = html.find("menu.controls-dropdown");
+  if (!menu.length) return;
 
-  // Insert button in the item sheet header
-  const header = html.find(".window-header .window-title");
-  const button = $(`
-    <a class="torchmaster-config" title="Configure Light Source" style="
-      margin-left: 8px;
-      cursor: pointer;
-      color: #a2642a;
-      font-size: 0.9em;
-    ">
-      🔥 Light Config
-    </a>
+  const menuItem = $(`
+    <li class="header-control">
+      <button type="button" class="control torchmaster-config">
+        <i class="control-icon fa-fw fa-solid fa-fire"></i>
+        <span class="control-label">Light Config</span>
+      </button>
+    </li>
   `);
 
-  header.after(button);
+  menu.append(menuItem);
+  menuItem.find("button").click(() => openLightConfig(app.item ?? app.document));
+}
 
-  button.click(() => openLightConfig(item));
-});
+Hooks.on("renderItemSheet", addLightConfigButton);
+Hooks.on("renderTidy5eItemSheetQuadrone", addLightConfigButton);
 
 // Open the light config dialog
 async function openLightConfig(item) {
