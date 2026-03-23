@@ -6,26 +6,15 @@
     padding: 8px;
     font-family: Georgia, serif;
   ">
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <label style="width: 120px;">Bright Radius (ft)</label>
-      <input 
-        type="number" 
-        name="bright" 
-        value="{{bright}}" 
-        min="0" 
-        style="flex: 1; padding: 4px;"
-      />
+    <div class="form-group">
+      <label>Bright Light (ft)</label>
+      <input type="number" name="bright" value="{{bright}}" min="0" step="1">
     </div>
 
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <label style="width: 120px;">Dim Radius (ft)</label>
-      <input 
-        type="number" 
-        name="dim" 
-        value="{{dim}}" 
-        min="0" 
-        style="flex: 1; padding: 4px;"
-      />
+    <div class="form-group">
+      <label>Additional Dim Light (ft)</label>
+      <input type="number" name="dim" value="{{dim}}" min="0" step="1">
+      <p class="hint">Extra dim light beyond the bright radius. Example: Torch = 20 bright, 20 additional dim.</p>
     </div>
 
     <div style="display: flex; align-items: center; gap: 10px;">

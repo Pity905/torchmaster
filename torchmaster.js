@@ -11,6 +11,7 @@ function hasDmPrivileges() {
 // Add button to both default and Tidy5e item sheets
 function addLightConfigButton(app, html) {
   if (!hasDmPrivileges()) return;
+
   const $html = html instanceof jQuery ? html : $(html.element ?? html);
   if ($html.find(".torchmaster-config").length > 0) return;
 
@@ -27,7 +28,7 @@ function addLightConfigButton(app, html) {
   `);
 
   menu.append(menuItem);
-  menuItem.find("button").click(() => openLightConfig(app.item ?? app.document));
+  menuItem.find("button").on("click", () => openLightConfig(app.item ?? app.document));
 }
 
 Hooks.on("renderItemSheet", addLightConfigButton);
@@ -35,7 +36,7 @@ Hooks.on("renderTidy5eItemSheetQuadrone", addLightConfigButton);
 
 // Open the light config dialog
 async function openLightConfig(item) {
-  const saved = item.getFlag("torchmaster", "lightConfig") ?? {
+  const stored = item.getFlag("torchmaster", "lightConfig") ?? {
     bright: 20,
     dim: 40,
     color: "#a2642a",
@@ -44,152 +45,108 @@ async function openLightConfig(item) {
     animationIntensity: 5
   };
 
+  // Show dim in the form as "additional dim beyond bright"
+  const saved = {
+    ...stored,
+    dim: Math.max((stored.dim ?? 0) - (stored.bright ?? 0), 0)
+  };
+
   const content = await foundry.applications.handlebars.renderTemplate(
     "modules/torchmaster/templates/light-config.html",
     saved
   );
 
   const { DialogV2 } = foundry.applications.api;
+
   await DialogV2.prompt({
     window: { title: `🔥 Light Config — ${item.name}` },
     content,
     ok: {
       label: "Save",
       callback: async (event, button) => {
-        const form = button.form
-          ?? button.closest("form")
-          ?? button.closest(".window-content").querySelector("form");
+        const form =
+          button.form ??
+          button.closest("form") ??
+          button.closest(".window-content")?.querySelector("form");
+
+        if (!form) {
+          ui.notifications.error("Torchmaster | Could not find config form.");
+          return;
+        }
+
+        const bright = parseInt(form.bright?.value) || 0;
+        const additionalDim = parseInt(form.dim?.value) || 0;
 
         const config = {
-          bright: parseInt(form.bright.value),
-          dim: parseInt(form.dim.value),
-          color: form.color.value,
-          animation: form.animation.value,
-          animationSpeed: parseInt(form.animationSpeed.value),
-          animationIntensity: parseInt(form.animationIntensity.value)
+          bright,
+          dim: bright + additionalDim,
+          color: form.color?.value ?? "#a2642a",
+          animation: form.animation?.value ?? "torch",
+          animationSpeed: parseInt(form.animationSpeed?.value) || 5,
+          animationIntensity: parseInt(form.animationIntensity?.value) || 5
         };
 
         await item.setFlag("torchmaster", "lightConfig", config);
 
-        // Check if Light Torch activity already exists
-        const activities = item.system.activities;
-        const hasActivity = activities?.some(a => a.name === "Light Torch")
-          ?? [...(activities?.values() ?? [])].some(a => a.name === "Light Torch");
-
-        if (!hasActivity) {
-          try {
-            const newId = foundry.utils.randomID();
-            const update = {};
-            update[`system.activities.${newId}`] = {
-              type: "utility",
-              name: "Light Torch",
-              img: item.img ?? "icons/sundries/lights/torch-brown-lit.webp",
-              activation: { type: "action", value: 1 }
-            };
-            await item.update(update);
-            ui.notifications.info(`Torchmaster | Light config saved and activity created for ${item.name}`);
-          } catch (err) {
-            console.warn("Torchmaster | Could not create activity automatically:", err);
-            ui.notifications.warn(`Torchmaster | Light config saved — please add a Utility activity manually in the Activities tab.`);
-          }
-        } else {
-          ui.notifications.info(`Torchmaster | Light config updated for ${item.name}`);
-        }
+        ui.notifications.info(
+          `Torchmaster | Light config saved for ${item.name}. Add a "Light Torch" utility activity manually in the Activities tab.`
+        );
       }
     }
   });
 }
 
-// Fire when an item with a torchmaster light config is used
-Hooks.on("dnd5e.useItem", async (item, config, options) => {
+// Toggle token light from the Light Torch activity
+async function toggleTorchLightFromActivity(activity) {
+  if (!activity) return;
+
+  const item = activity.item;
   if (!item) return;
+
+  // Only run for the manual Light Torch activity
+  if (activity.name !== "Light Torch") return;
+
   const lightConfig = item.getFlag("torchmaster", "lightConfig");
   if (!lightConfig) return;
 
   const actor = item.actor;
   if (!actor) return;
 
-  const token = canvas.tokens.controlled.find(t => t.actor?.id === actor.id)
-    ?? canvas.tokens.placeables.find(t => t.actor?.id === actor.id);
-  if (!token) return;
+  const token =
+    canvas.tokens.controlled.find(t => t.actor?.id === actor.id) ??
+    canvas.tokens.placeables.find(t => t.actor?.id === actor.id);
 
-  const hasLight = token.document.light.bright > 0;
+  if (!token) {
+    ui.notifications.warn("Torchmaster | No token found for this actor.");
+    return;
+  }
+
+  const currentLight = token.document.light ?? {};
+  const hasLight =
+    (currentLight.bright ?? 0) > 0 ||
+    (currentLight.dim ?? 0) > 0;
+
+  const turningOn = !hasLight;
 
   await token.document.update({
     light: {
-      bright: hasLight ? 0 : lightConfig.bright,
-      dim: hasLight ? 0 : lightConfig.dim,
-      color: lightConfig.color,
+      bright: turningOn ? (lightConfig.bright ?? 20) : 0,
+      dim: turningOn ? (lightConfig.dim ?? 40) : 0,
+      color: lightConfig.color ?? "#a2642a",
       animation: {
-        type: hasLight ? "none" : lightConfig.animation,
-        speed: lightConfig.animationSpeed,
-        intensity: lightConfig.animationIntensity
+        type: turningOn ? (lightConfig.animation ?? "torch") : "none",
+        speed: turningOn ? (lightConfig.animationSpeed ?? 5) : 0,
+        intensity: turningOn ? (lightConfig.animationIntensity ?? 5) : 0
       }
     }
   });
+}
 
-  await ChatMessage.create({
-    speaker: ChatMessage.getSpeaker({ actor }),
-    flags: {
-      world: {
-        torchToggle: true,
-        tokenId: token.id,
-        lightConfig: lightConfig
-      }
-    },
-    content: `
-      <div style="background:#1a1a2e;border:1px solid #a2642a;border-radius:8px;padding:10px;font-family:Georgia,serif;color:#f0e6d3;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;border-bottom:1px solid #a2642a;padding-bottom:8px;">
-          <img src="${item.img}" width="36" height="36" style="border-radius:4px;border:1px solid #a2642a"/>
-          <strong style="font-size:1.1em;">🔥 ${item.name}</strong>
-        </div>
-        <p style="margin:4px 0;font-size:0.9em;">
-          ${hasLight ? "🌑 The light is extinguished." : "🔥 The light flickers to life."}
-        </p>
-        <p style="margin:4px 0;font-size:0.85em;color:#c8a97e;">
-          Bright: <strong>${lightConfig.bright}ft</strong> &nbsp;|&nbsp; Dim: <strong>${lightConfig.dim}ft</strong>
-        </p>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button class="torch-btn" data-token-id="${token.id}" data-action="light"
-            style="flex:1;background:#2a2a3e;color:#f0e6d3;border:1px solid #a2642a;border-radius:4px;padding:4px 8px;cursor:pointer;font-family:Georgia,serif;">
-            🔥 Light
-          </button>
-          <button class="torch-btn" data-token-id="${token.id}" data-action="extinguish"
-            style="flex:1;background:#2a2a3e;color:#f0e6d3;border:1px solid #a2642a;border-radius:4px;padding:4px 8px;cursor:pointer;font-family:Georgia,serif;">
-            🌑 Extinguish
-          </button>
-        </div>
-      </div>
-    `
-  });
-});
-
-// Handle chat button clicks (Foundry v13+)
-Hooks.on("renderChatMessageHTML", (message, html) => {
-  if (!message.flags?.world?.torchToggle) return;
-  const lightConfig = message.flags.world.lightConfig;
-
-  html.querySelectorAll(".torch-btn").forEach(btn => {
-    btn.addEventListener("click", async (event) => {
-      const action = event.currentTarget.dataset.action;
-      const tokenId = event.currentTarget.dataset.tokenId;
-      const t = canvas.tokens.get(tokenId);
-      if (!t) return ui.notifications.warn("Token not found!");
-
-      const isLighting = action === "light";
-      await t.document.update({
-        light: {
-          bright: isLighting ? (lightConfig?.bright ?? 20) : 0,
-          dim: isLighting ? (lightConfig?.dim ?? 40) : 0,
-          color: lightConfig?.color ?? "#a2642a",
-          animation: {
-            type: isLighting ? (lightConfig?.animation ?? "torch") : "none",
-            speed: lightConfig?.animationSpeed ?? 5,
-            intensity: lightConfig?.animationIntensity ?? 5
-          }
-        }
-      });
-      ui.notifications.info(isLighting ? "Light on!" : "Light off!");
-    });
-  });
+// Fires when an activity is used
+Hooks.on("dnd5e.postCreateUsageMessage", async (activity, card) => {
+  try {
+    await toggleTorchLightFromActivity(activity);
+  } catch (err) {
+    console.error("Torchmaster | Failed to toggle torch light from activity", err);
+  }
 });
