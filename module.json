@@ -1,12 +1,14 @@
 {
   "id": "torchmaster",
   "title": "Torchmaster",
-  "description": "<p>Easy light source configuration for items.</p>",
+  "description": "Easy light source configuration for items.",
   "version": "1.0.0",
-  "manifest": "https://localhost/module.json",
+  "manifest": "https://raw.githubusercontent.com/Pity905/torchmaster/main/module.json",
+  "download": "https://github.com/Pity905/torchmaster/archive/refs/heads/main.zip",
+  "url": "https://github.com/Pity905/torchmaster",
   "compatibility": {
     "minimum": "11",
-    "verified": "12"
+    "verified": "13"
   },
   "authors": [
     {
@@ -16,6 +18,5 @@
   ],
   "flags": {
     "canUpload": true
-  },
-  "url": "https://github.com/Pity905/torchmaster"
+  }
 }
