@@ -1,0 +1,78 @@
+<form>
+  <div style="
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px;
+    font-family: Georgia, serif;
+  ">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label style="width: 120px;">Bright Radius (ft)</label>
+      <input 
+        type="number" 
+        name="bright" 
+        value="{{bright}}" 
+        min="0" 
+        style="flex: 1; padding: 4px;"
+      />
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label style="width: 120px;">Dim Radius (ft)</label>
+      <input 
+        type="number" 
+        name="dim" 
+        value="{{dim}}" 
+        min="0" 
+        style="flex: 1; padding: 4px;"
+      />
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label style="width: 120px;">Light Color</label>
+      <input 
+        type="color" 
+        name="color" 
+        value="{{color}}" 
+        style="flex: 1; height: 32px; padding: 2px;"
+      />
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label style="width: 120px;">Animation</label>
+      <select name="animation" style="flex: 1; padding: 4px;">
+        <option value="none" {{#if (eq animation "none")}}selected{{/if}}>None</option>
+        <option value="torch" {{#if (eq animation "torch")}}selected{{/if}}>Torch</option>
+        <option value="pulse" {{#if (eq animation "pulse")}}selected{{/if}}>Pulse</option>
+        <option value="chroma" {{#if (eq animation "chroma")}}selected{{/if}}>Chroma</option>
+        <option value="wave" {{#if (eq animation "wave")}}selected{{/if}}>Wave</option>
+        <option value="fog" {{#if (eq animation "fog")}}selected{{/if}}>Fog</option>
+        <option value="sunburst" {{#if (eq animation "sunburst")}}selected{{/if}}>Sunburst</option>
+      </select>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label style="width: 120px;">Animation Speed</label>
+      <input 
+        type="range" 
+        name="animationSpeed" 
+        value="{{animationSpeed}}" 
+        min="1" 
+        max="10" 
+        style="flex: 1;"
+      />
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label style="width: 120px;">Animation Intensity</label>
+      <input 
+        type="range" 
+        name="animationIntensity" 
+        value="{{animationIntensity}}" 
+        min="1" 
+        max="10" 
+        style="flex: 1;"
+      />
+    </div>
+  </div>
+</form>

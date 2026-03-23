@@ -1,0 +1,23 @@
+{
+  "id": "torchmaster",
+  "title": "Torchmaster",
+  "description": "Easy light source configuration for items.",
+  "version": "1.0.0",
+  "manifest": "https://localhost/module.json",
+  "compatibility": {
+    "minimum": "11",
+    "verified": "12"
+  },
+  "authors": [
+    {
+      "name": "pity905",
+	  "esmodules": ["torchmaster.js"],
+	  "languages": [],
+	  "systems": ["dnd5e"],
+      "flags": {}
+    }
+  ],
+  "flags": {
+    "canUpload": true
+  }
+}
