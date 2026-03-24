@@ -304,6 +304,13 @@ function buildChatContent(item, token, actor, lightConfig, turningOn) {
   `;
 }
 
+// Helper — get whisper recipient IDs (actor owners + all GMs)
+function getTorchWhispers(actor) {
+  return game.users
+    .filter(u => u.isGM || actor.testUserPermission(u, "OWNER"))
+    .map(u => u.id);
+}
+
 // Toggle token light from the Light Torch activity
 async function toggleTorchLightFromActivity(activity) {
   if (!activity) return;
@@ -345,6 +352,7 @@ async function toggleTorchLightFromActivity(activity) {
     if (!hasSupplies(item, actor, lightConfig)) {
       await ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ actor }),
+        whisper: getTorchWhispers(actor),
         content: `
           <div style="background:#1a1a2e;border:1px solid #8b2a2a;border-radius:8px;padding:10px;font-family:Georgia,serif;color:#f0e6d3;">
             <div style="display:flex;align-items:center;gap:10px;">
@@ -377,6 +385,7 @@ async function toggleTorchLightFromActivity(activity) {
 
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
+    whisper: getTorchWhispers(actor),
     flags: {
       world: {
         torchToggle: true,
@@ -413,7 +422,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
       const t = canvas.tokens.get(tokenId);
       if (!t) return ui.notifications.warn("Torchmaster | Token not found!");
 
-      const actor = game.actors.get(actorId);
+      const actor = t.actor ?? game.actors.get(actorId);
       const item = actor?.items.get(itemId);
 
       if (action === "light") {
