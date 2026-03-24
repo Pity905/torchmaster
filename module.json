@@ -2,7 +2,7 @@
   "id": "torchmaster",
   "title": "Torchmaster",
   "description": "Easy light source configuration for items.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "manifest": "https://raw.githubusercontent.com/Pity905/torchmaster/main/module.json",
   "download": "https://github.com/Pity905/torchmaster/archive/refs/heads/main.zip",
   "url": "https://github.com/Pity905/torchmaster",
