@@ -157,7 +157,6 @@ async function toggleTorchLightFromActivity(activity) {
   const item = activity.item;
   if (!item) return;
 
-  // Only run for the manual Light Torch activity
   if (activity.name !== "Light Torch") return;
 
   const lightConfig = item.getFlag("torchmaster", "lightConfig");
@@ -175,12 +174,22 @@ async function toggleTorchLightFromActivity(activity) {
     return;
   }
 
+  // Check if torch is burned out
+  const burnedOut = token.document.getFlag("torchmaster", "burnedOut");
   const currentLight = token.document.light ?? {};
-  const hasLight =
-    (currentLight.bright ?? 0) > 0 ||
-    (currentLight.dim ?? 0) > 0;
-
+  const hasLight = (currentLight.bright ?? 0) > 0 || (currentLight.dim ?? 0) > 0;
   const turningOn = !hasLight;
+
+  // Block relighting if burned out and no torches left
+  if (turningOn && burnedOut) {
+    const quantity = item.system.quantity ?? 0;
+    if (quantity <= 0) {
+      ui.notifications.warn(`Torchmaster | ${actor.name} has no torches left!`);
+      return;
+    }
+    // Clear burned out flag since they have torches
+    await token.document.unsetFlag("torchmaster", "burnedOut");
+  }
 
   await token.document.update({
     light: {
@@ -194,6 +203,50 @@ async function toggleTorchLightFromActivity(activity) {
       }
     }
   });
+
+  // Post chat card
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    flags: {
+      world: {
+        torchToggle: true,
+        tokenId: token.id,
+        actorId: actor.id,
+        itemId: item.id,
+        lightConfig: lightConfig,
+        isLit: turningOn
+      }
+    },
+    content: `
+      <div style="background:#1a1a2e;border:1px solid #a2642a;border-radius:8px;padding:10px;font-family:Georgia,serif;color:#f0e6d3;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;border-bottom:1px solid #a2642a;padding-bottom:8px;">
+          <img src="${item.img}" width="36" height="36" style="border-radius:4px;border:1px solid #a2642a"/>
+          <strong style="font-size:1.1em;">🔥 ${item.name}</strong>
+        </div>
+        <p style="margin:4px 0;font-size:0.9em;">
+          ${turningOn ? "🔥 The torch flickers to life." : "🌑 The torch is extinguished safely."}
+        </p>
+        <p style="margin:4px 0;font-size:0.85em;color:#c8a97e;">
+          Bright: <strong>${lightConfig.bright}ft</strong> &nbsp;|&nbsp; Dim: <strong>${lightConfig.dim}ft</strong>
+          &nbsp;|&nbsp; Torches left: <strong>${item.system.quantity ?? 0}</strong>
+        </p>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="torch-btn" data-token-id="${token.id}" data-actor-id="${actor.id}" data-item-id="${item.id}" data-action="light"
+            style="flex:1;background:#2a2a3e;color:#f0e6d3;border:1px solid #a2642a;border-radius:4px;padding:4px 8px;cursor:pointer;font-family:Georgia,serif;">
+            🔥 Light
+          </button>
+          <button class="torch-btn" data-token-id="${token.id}" data-actor-id="${actor.id}" data-item-id="${item.id}" data-action="extinguish"
+            style="flex:1;background:#2a2a3e;color:#f0e6d3;border:1px solid #a2642a;border-radius:4px;padding:4px 8px;cursor:pointer;font-family:Georgia,serif;">
+            🌑 Extinguish
+          </button>
+          <button class="torch-btn" data-token-id="${token.id}" data-actor-id="${actor.id}" data-item-id="${item.id}" data-action="burnout"
+            style="flex:1;background:#3a1a1a;color:#f0e6d3;border:1px solid #8b2a2a;border-radius:4px;padding:4px 8px;cursor:pointer;font-family:Georgia,serif;">
+            💀 Burn Out
+          </button>
+        </div>
+      </div>
+    `
+  });
 }
 
 // Fires when an activity is used
@@ -203,4 +256,82 @@ Hooks.on("dnd5e.postCreateUsageMessage", async (activity, card) => {
   } catch (err) {
     console.error("Torchmaster | Failed to toggle torch light from activity", err);
   }
+});
+
+// Handle chat button clicks (Foundry v13+)
+Hooks.on("renderChatMessageHTML", (message, html) => {
+  if (!message.flags?.world?.torchToggle) return;
+
+  const { tokenId, actorId, itemId, lightConfig } = message.flags.world;
+
+  html.querySelectorAll(".torch-btn").forEach(btn => {
+    btn.addEventListener("click", async (event) => {
+      const action = event.currentTarget.dataset.action;
+      const t = canvas.tokens.get(tokenId);
+      if (!t) return ui.notifications.warn("Torchmaster | Token not found!");
+
+      const actor = game.actors.get(actorId);
+      const item = actor?.items.get(itemId);
+
+      if (action === "light") {
+        // Check burned out flag and quantity
+        const burnedOut = t.document.getFlag("torchmaster", "burnedOut");
+        if (burnedOut) {
+          const quantity = item?.system.quantity ?? 0;
+          if (quantity <= 0) {
+            return ui.notifications.warn(`Torchmaster | ${actor?.name ?? "Token"} has no torches left!`);
+          }
+          await t.document.unsetFlag("torchmaster", "burnedOut");
+        }
+        await t.document.update({
+          light: {
+            bright: lightConfig?.bright ?? 20,
+            dim: lightConfig?.dim ?? 40,
+            color: lightConfig?.color ?? "#a2642a",
+            animation: {
+              type: lightConfig?.animation ?? "torch",
+              speed: lightConfig?.animationSpeed ?? 5,
+              intensity: lightConfig?.animationIntensity ?? 5
+            }
+          }
+        });
+        ui.notifications.info("🔥 Torch lit!");
+
+      } else if (action === "extinguish") {
+        await t.document.update({
+          light: { bright: 0, dim: 0, animation: { type: "none" } }
+        });
+        ui.notifications.info("🌑 Torch extinguished safely — not consumed.");
+
+      } else if (action === "burnout") {
+        // Confirm before consuming
+        const { DialogV2 } = foundry.applications.api;
+        const confirmed = await DialogV2.confirm({
+          window: { title: "Burn Out Torch?" },
+          content: `<p style="padding:8px;">This will extinguish the light and consume one torch from ${actor?.name ?? "the actor"}'s inventory. Are you sure?</p>`,
+          yes: { label: "Yes, burn it out" },
+          no: { label: "Cancel" }
+        });
+        if (!confirmed) return;
+
+        // Extinguish light
+        await t.document.update({
+          light: { bright: 0, dim: 0, animation: { type: "none" } }
+        });
+
+        // Set burned out flag
+        await t.document.setFlag("torchmaster", "burnedOut", true);
+
+        // Consume one torch
+        if (item) {
+          const quantity = item.system.quantity ?? 0;
+          const newQuantity = Math.max(quantity - 1, 0);
+          await item.update({ "system.quantity": newQuantity });
+          ui.notifications.info(`💀 Torch burned out. ${actor?.name} has ${newQuantity} torch${newQuantity !== 1 ? "es" : ""} remaining.`);
+        } else {
+          ui.notifications.warn("Torchmaster | Could not find torch item to consume.");
+        }
+      }
+    });
+  });
 });
