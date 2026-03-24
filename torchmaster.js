@@ -88,9 +88,63 @@ async function openLightConfig(item) {
 
         await item.setFlag("torchmaster", "lightConfig", config);
 
-        ui.notifications.info(
-          `Torchmaster | Light config saved for ${item.name}. Add a "Light Torch" utility activity manually in the Activities tab.`
-        );
+        // Check if Light Torch activity already exists
+        const activities = item.system.activities;
+        const activityValues = activities
+          ? (typeof activities.values === "function" ? [...activities.values()] : Object.values(activities))
+          : [];
+        const hasActivity = activityValues.some(a => a.name === "Light Torch");
+
+        if (!hasActivity) {
+          try {
+            const newId = foundry.utils.randomID();
+            const update = {};
+            update[`system.activities.${newId}`] = {
+              _id: newId,
+              type: "utility",
+              name: "Light Torch",
+              img: item.img ?? "icons/sundries/lights/torch-brown-lit.webp",
+              activation: {
+                type: "action",
+                value: 1,
+                condition: ""
+              },
+              duration: {
+                value: "",
+                units: "",
+                special: ""
+              },
+              target: {
+                template: { count: "", contiguous: false, type: "", size: "", width: "", height: "", units: "" },
+                affects: { count: "", type: "", choice: false, special: "" },
+                prompt: false
+              },
+              range: {
+                value: null,
+                units: "",
+                special: ""
+              },
+              uses: {
+                spent: 0,
+                max: "",
+                recovery: []
+              },
+              consumption: {
+                targets: [],
+                scaling: { allowed: false, max: "" }
+              },
+              effects: [],
+              roll: { prompt: false, visible: false, name: "", formula: "" }
+            };
+            await item.update(update);
+            ui.notifications.info(`Torchmaster | Light config saved and "Light Torch" activity created for ${item.name}`);
+          } catch (err) {
+            console.warn("Torchmaster | Could not create activity automatically:", err);
+            ui.notifications.warn(`Torchmaster | Light config saved — please add a Utility activity manually in the Activities tab.`);
+          }
+        } else {
+          ui.notifications.info(`Torchmaster | Light config updated for ${item.name}`);
+        }
       }
     }
   });
