@@ -1,11 +1,6 @@
 <form>
-  <div style="
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 8px;
-    font-family: Georgia, serif;
-  ">
+  <div style="display:flex;flex-direction:column;gap:12px;padding:8px;font-family:Georgia,serif;">
+
     <div class="form-group">
       <label>Bright Light (ft)</label>
       <input type="number" name="bright" value="{{bright}}" min="0" step="1">
@@ -14,54 +9,89 @@
     <div class="form-group">
       <label>Additional Dim Light (ft)</label>
       <input type="number" name="dim" value="{{dim}}" min="0" step="1">
-      <p class="hint">Extra dim light beyond the bright radius. Example: Torch = 20 bright, 20 additional dim.</p>
+      <p class="hint">Extra dim beyond bright. Torch = 20 bright + 20 additional dim.</p>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <label style="width: 120px;">Light Color</label>
-      <input 
-        type="color" 
-        name="color" 
-        value="{{color}}" 
-        style="flex: 1; height: 32px; padding: 2px;"
-      />
+    <div class="form-group">
+      <label>Light Color</label>
+      <input type="color" name="color" value="{{color}}" style="height:32px;padding:2px;">
     </div>
 
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <label style="width: 120px;">Animation</label>
-      <select name="animation" style="flex: 1; padding: 4px;">
-        <option value="none" {{#if (eq animation "none")}}selected{{/if}}>None</option>
-        <option value="torch" {{#if (eq animation "torch")}}selected{{/if}}>Torch</option>
-        <option value="pulse" {{#if (eq animation "pulse")}}selected{{/if}}>Pulse</option>
-        <option value="chroma" {{#if (eq animation "chroma")}}selected{{/if}}>Chroma</option>
-        <option value="wave" {{#if (eq animation "wave")}}selected{{/if}}>Wave</option>
-        <option value="fog" {{#if (eq animation "fog")}}selected{{/if}}>Fog</option>
+    <div class="form-group">
+      <label>Animation</label>
+      <select name="animation">
+        <option value="none"     {{#if (eq animation "none")}}selected{{/if}}>None</option>
+        <option value="torch"    {{#if (eq animation "torch")}}selected{{/if}}>Torch</option>
+        <option value="pulse"    {{#if (eq animation "pulse")}}selected{{/if}}>Pulse</option>
+        <option value="chroma"   {{#if (eq animation "chroma")}}selected{{/if}}>Chroma</option>
+        <option value="wave"     {{#if (eq animation "wave")}}selected{{/if}}>Wave</option>
+        <option value="fog"      {{#if (eq animation "fog")}}selected{{/if}}>Fog</option>
         <option value="sunburst" {{#if (eq animation "sunburst")}}selected{{/if}}>Sunburst</option>
       </select>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <label style="width: 120px;">Animation Speed</label>
-      <input 
-        type="range" 
-        name="animationSpeed" 
-        value="{{animationSpeed}}" 
-        min="1" 
-        max="10" 
-        style="flex: 1;"
-      />
+    <div class="form-group">
+      <label>Animation Speed</label>
+      <input type="range" name="animationSpeed" value="{{animationSpeed}}" min="1" max="10">
     </div>
 
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <label style="width: 120px;">Animation Intensity</label>
-      <input 
-        type="range" 
-        name="animationIntensity" 
-        value="{{animationIntensity}}" 
-        min="1" 
-        max="10" 
-        style="flex: 1;"
-      />
+    <div class="form-group">
+      <label>Animation Intensity</label>
+      <input type="range" name="animationIntensity" value="{{animationIntensity}}" min="1" max="10">
     </div>
+
+    <hr>
+
+    <div class="form-group">
+      <label>Activation Type</label>
+      <select name="activationType">
+        <option value="action"  {{#if (eq activationType "action")}}selected{{/if}}>Action</option>
+        <option value="bonus"   {{#if (eq activationType "bonus")}}selected{{/if}}>Bonus Action</option>
+        <option value="react"   {{#if (eq activationType "react")}}selected{{/if}}>Reaction</option>
+        <option value="minute"  {{#if (eq activationType "minute")}}selected{{/if}}>1 Minute</option>
+        <option value="none"    {{#if (eq activationType "none")}}selected{{/if}}>None</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Consumption Type</label>
+      <select name="consumptionType" id="tm-consumption-type">
+        <option value="quantity"  {{#if (eq consumptionType "quantity")}}selected{{/if}}>Consume Quantity (e.g. Torch)</option>
+        <option value="uses"      {{#if (eq consumptionType "uses")}}selected{{/if}}>Consume Uses (e.g. Lantern)</option>
+        <option value="none"      {{#if (eq consumptionType "none")}}selected{{/if}}>No Consumption (e.g. Magical)</option>
+        <option value="otherItem" {{#if (eq consumptionType "otherItem")}}selected{{/if}}>Consume Other Item (e.g. Oil Flask)</option>
+      </select>
+    </div>
+
+    <div id="tm-uses-config" style="display:none;">
+      <div class="form-group">
+        <label>Max Uses</label>
+        <input type="number" name="usesMax" value="{{usesMax}}" min="1" step="1">
+        <p class="hint">Auto-sets the item's Limited Uses max when saved.</p>
+      </div>
+    </div>
+
+    <div id="tm-otheritem-config" style="display:none;">
+      <div class="form-group">
+        <label>Other Item Name</label>
+        <input type="text" name="otherItemName" value="{{otherItemName}}" placeholder="e.g. Oil Flask">
+        <p class="hint">Exact name of the item to consume from the actor's inventory.</p>
+      </div>
+    </div>
+
   </div>
 </form>
+
+<script>
+  const sel = document.getElementById("tm-consumption-type");
+  const usesDiv = document.getElementById("tm-uses-config");
+  const otherDiv = document.getElementById("tm-otheritem-config");
+
+  function updateVisibility() {
+    usesDiv.style.display = sel.value === "uses" ? "block" : "none";
+    otherDiv.style.display = sel.value === "otherItem" ? "block" : "none";
+  }
+
+  sel.addEventListener("change", updateVisibility);
+  updateVisibility();
+</script>
